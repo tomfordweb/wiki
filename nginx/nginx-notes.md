@@ -585,3 +585,35 @@ http {
 
 }
 ```
+# GEOIP
+- [geoip documentation](https://github.com/leev/ngx_http_geoip2_module)
+First you must enable the module `--with-http_geoip_module`
+Now download the maxmind geoip database and install it following the documentation linked above.
+- Once the files are extracted
+
+```
+http {
+  geoip_county /etc/nginx/geoip/GeoIP.dat;
+  geoip_city /etc/nginx/geoip/GeoLiteCity.dat;
+  
+  location /geo_country {
+    return 200 "visiting from $geo_country_name";
+  }
+}
+
+```
+# Video Streaming
+
+```
+http {
+  server {
+    location ~ \.mp4$ {
+      root /sites/downloads/;
+      mp4;
+      mp4_buffer_size 4M;
+      mp4_max_buffer_size 10M;
+    }
+  }
+}
+
+```
