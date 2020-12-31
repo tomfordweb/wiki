@@ -1,0 +1,3 @@
+- gitlab is actually more popular than jenkins, people are moving to gitlab from github for ci/cd
+- we should start adding the commit hash somewhere on the homepage - we can even add an additional pipeline job that checks the src of the website for the commit hash.
+- we should use yaml anchors to template the templates better
