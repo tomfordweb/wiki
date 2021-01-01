@@ -1,0 +1,16 @@
+set ruler
+set showcmd
+set scrolloff=5
+set wildmenu
+set incsearch
+set number
+"set backup
+"set bex=.backup
+set hidden
+set ai
+set si
+set expandtab
+set shiftwidth=2
+set smartindent
+set tabstop=2
+set background=dark
