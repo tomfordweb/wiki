@@ -270,25 +270,25 @@ A timeout will prevent a client from sending an endless stream of data and break
 ```
 # Buffer size for POST submissions
 client_body_buffer_size 10K;
-client_max_mody_size 8m;
+client_max_body_size 8m;
 
-# buffer size for headers
+# Buffer size for headers
 client_header_buffer_size 1k;
 
-# MAx time to receive client headers/body
+# Max time to receive client headers/body
 client_body_timeout 12;
-clinent_header_timeout 12;
+client_header_timeout 12;
 
-# max time to keep a connection open for
+# Max time to keep a connection open for
 keepalive_timeout 15;
 
 # Max time for the client accept/receive a response
 send_timeout 10;
 
-# skip buffering for static files
+# Skip buffering for static files
 sendfile on;
 
-# optimize sendfile packets
+# Optimize sendfile packets
 tcp_nopush on;
 ```
 
@@ -315,10 +315,11 @@ The below code will tell the client browser to cache any css, jpg, js, or png fo
     }
 ```
 
-# compressing responses with gzip
+# Compressing responses with gzip
+
 Enable gzip compressiong with the directive 
 
-- a compression level above 5 is basically useless. 3 or 4 are good for most projects.
+- A compression level above 5 is basically useless. 3 or 4 are good for most projects.
 
 ```
 gzip on;
@@ -326,12 +327,13 @@ gzip_comp_level 3;
 gzip_types text/css text/javascript;
 ```
 
-Not that you must return the header to your location.
+Note that you must return the header to your location. This occurs by default on my nginx configuration, but you should check your headers for `Vary: Accept-Encoding`
+
 ```
 add_header Vary Accept=Encoding
 ```
 
-# caching
+# Caching
 
 You can specify the format of a cache like so
 ```
@@ -386,7 +388,7 @@ server {
 }
 ```
 
-# server push
+# Server Push
 
 Server push allows you to return multiple files with a single response.
 
