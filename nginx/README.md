@@ -619,3 +619,39 @@ http {
 }
 
 ```
+
+# Remove .html extensions
+```
+http {
+  server {
+    listen 8080;
+    server_name localhost;
+
+    location / {
+      root /usr/share/nginx/html;
+      # Rewrite paths ending in .html
+      if ($request_uri ~ ^/(.*)\.html) {
+          return 302 /$1;
+      }
+      try_files $uri $uri.html $uri/ =404;
+    }
+  }
+}
+```
+
+# Redirect www to non-www
+```
+http {
+  server {
+    listen 80;
+    server_name www.yourdomain.com;
+    return 301 http://yourdomain.com;
+  }
+  server {
+    listen 80;
+    server_name yourdomain.com;
+    ....
+  }
+}
+```
+
