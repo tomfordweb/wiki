@@ -11,7 +11,13 @@ root@nginx-tutorial:/sites/demo# find / -name *fpm.sock
 ```
 
 
+### Checking open ports.
 
+Netstat works best.
+
+```
+sudo netstat -plnt
+```
 
 
 # Hardware
