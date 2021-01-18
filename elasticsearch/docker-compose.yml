@@ -1,0 +1,83 @@
+# Below is the docker setup I did in my udemy tutorial for ElasticSearch
+# https://www.udemy.com/course/elasticsearch-complete-guide/
+
+version: '3.7'
+
+services:
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.10.2
+    links:
+      - elasticsearch01:elasticsearch
+    ports:
+      - 5601:5601
+    networks:
+      - elastic
+
+  elasticsearch01:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.2
+    container_name: elasticsearch01
+    environment:
+      - node.name=elasticsearch01
+      - cluster.name=es-docker-cluster
+      - discovery.seed_hosts=elasticsearch02,elasticsearch03
+      - cluster.initial_master_nodes=elasticsearch01,elasticsearch02,elasticsearch03
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - elastic-vol01:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+    networks:
+      - elastic
+  elasticsearch02:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.2
+    container_name: elasticsearch02
+    environment:
+      - node.name=elasticsearch02
+      - cluster.name=es-docker-cluster
+      - discovery.seed_hosts=elasticsearch01,elasticsearch03
+      - cluster.initial_master_nodes=elasticsearch01,elasticsearch02,elasticsearch03
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - elastic-vol02:/usr/share/elasticsearch/data
+    networks:
+      - elastic
+  elasticsearch03:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.2
+    container_name: elasticsearch03
+    environment:
+      - node.name=elasticsearch03
+      - cluster.name=es-docker-cluster
+      - discovery.seed_hosts=elasticsearch01,elasticsearch02
+      - cluster.initial_master_nodes=elasticsearch01,elasticsearch02,elasticsearch03
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - elastic-vol03:/usr/share/elasticsearch/data
+    networks:
+      - elastic
+
+volumes:
+  elastic-vol01:
+    driver: local
+  elastic-vol02:
+    driver: local
+  elastic-vol03:
+    driver: local
+
+networks:
+  elastic:
+    driver: bridge
