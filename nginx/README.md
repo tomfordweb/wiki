@@ -655,3 +655,11 @@ http {
 }
 ```
 
+# Port in redirect
+
+Removes the port in the redirect when the proxied server handles a redirect.
+
+This wasted like a day of my life. Figuring this out.
+
+If using behind a proxyi, the `port_in_redirect` must be on the host server, from my experience it seems to work est in the main `server` or `http` blocks, and not in location blocks.
+
