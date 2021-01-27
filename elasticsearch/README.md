@@ -1,3 +1,5 @@
+Code Examples [here](https://github.com/codingexplained/complete-guide-to-elasticsearch)
+
 # Introduction to elasticsearch
 
 Elasticsearch is an analytics and full text search engine. It allows you to index and search large amounts of data.
@@ -470,4 +472,402 @@ PUT /reviews
     }
   }
 }
+```
+
+
+# How ES handles dates.
+
+### Default behavior
+A date without time, a date with time, or milliseconds since the epoch.
+
+UTC timezone by default, dates must be formatted according to ISO 8601.
+
+
+### How dates are stored
+
+Stored internally as milliseconds since the epoch. Any value that you supply is converted to a long value internally.
+
+Dates are converted to UTC, this applies to indexes as well as search queries.
+
+
+*NOTE* You should not provide unix timestamps to elasticsearch.
+
+# Missing Fields
+
+all fields are optional by default by ES. You can leave out a field when indexing documents. Because of this, some integrity checks are needed at the application level.
+
+Adding a field mapping does not make the field required. ES will automatically handle missing fields.
+
+# Mapping parameters
+
+### format
+Used to customixe th format for date fields.
+Use strict format whenever possible.
+
+```
+strict_date_optional_time || epoch_millis
+```
+
+or `dd/MM/yyyy` The default Java format for dates.
+
+### propeties
+
+defines nested fields for `object` and `nested` types.
+
+ 
+### coerce
+
+lets you enable or disable type coercion of values (enabled by default) of a document. 
+
+It is also possible to specify coercion at the index leve. Since this is enabled by default it is best to disable coercion at the index leve.
+
+### doc values
+
+
+ES makes use of several different data strutures. No single data structure serves all purposes. 
+
+Inverted indicies for example are great at searcing text, but they don't perform well for many other data access patterns.
+
+Doc values is optimized for a different data access pattern `document -> terms`
+
+Dov values are an uninverted inverted index, so they are used for sorting, aggregations, and scripting.
+
+You ca set this to false to save disk space, however it is insignificant at smaller scale.
+
+### norms
+
+Refers to normalization factors for relevance scoring. Oftewe don't just want to filter results, but also rank them.
+
+norms can be disabled to save disk space on fields that wont be used for relevance sorting. Keep in mind these fields can still be used for filtering and aggregations.
+
+Things like categories or tags do not need norms indexes because they will most likely not be used in full text search.
+
+### index
+
+You can disable indexing for a field. This is useful if you won't use a field for search queries but are storing it as aggregated data for example. Another example is time series data.
+
+Disabling indexes will save disk space and slightly improve indexing throughput.
+
+
+###  null_value
+
+NULL values cannot be indexed or searhched. Use this parameter to replace null values wit another value.
+
+This only works with explicit NULL values. Also, the replacement field must be the same data type.
+
+
+### copy_to
+
+Used to copy multiple field values into a group field. You just need to specify the nam of the target field as the value.
+
+Keep in mind that values are copied, not terms/tokens. The analyzer for the target fiel is used for the values.
+
+The target fiel is not a part of `_source`
+
+# Updating existing mappings
+
+You cannot. The exception is the `ignore_above` which ignores a string by character length.
+
+Reindex the documents and get it right this time.
+
+# Reindexing.
+
+
+```
+PUT /reviews/_new
+{
+  ...paste exising output from
+  GET /reviews/_mappings
+  ... update whatever you want.
+}
+```
+```
+POST /_reindex
+{ 
+  "source":{
+    "index": "reviews"
+  },
+  "dest": {
+    "index": "reviews_new"
+  }
+}
+```
+You can also add query logic.
+
+# Field aliases
+Field names can be changed when reindexing documents. Probably not worth it for large indexes with lots of documents.
+
+The alternative is to use field aliases. Which don't require the docuent to be reindexed. Aliases can aslo be used within queries. Aliases are defined with a field mapping.
+
+Field aliases can be updated, you can simply perform an update with a new path value.
+
+Field aliases can also be set at the cluster level. Which will help when working with large amounts of data.
+
+# Index Templates
+Index templates specify settings and mappings. They are applied to indicies that match one or more patterns. These patterns include wildcards. Index templates take effect when creating new indices.
+
+A new index may match multiple templates.
+
+You can update a template, by providing the existing and upate data, however it will only apply to new indexes.
+
+# elastic common schema
+
+This is a spec for common fields and how they should be mapped. Before this filebeats would send different formats for apache vs nginx logs.
+
+@timestamp for example is the standard name for a timstamp when an event originated.
+
+In ECS documents are referred ot as events, ECS doesnt provide fields for non events (productS).
+
+This is mostly used for standrd events - web server logs operating system metrics, etc.
+
+
+# dynamic mapping
+
+ES will automatically map scalars/data stryctyres to what it thinks the value is
+
+```
+string -> text/date/float/long
+integet -> long
+floating point number -> float
+bool -> bool
+object -> object
+array -> depends on first null value
+```
+
+## combining explicit and dynamic mapping
+
+To disable dynamic mapping, set `{"mappings":"dynamic":false}}`
+
+This instructs ES to ignore new fields, the data is returned in the `_source` but it is not indexed. This means that new fields must be mapped explicitly when adding them.
+
+You can also set `dynamic` to `strict` to make it so that any new documents added will error if the field is not mapped.
+
+# Dynamic Templates
+A dynamic template contains one or more conditions, as well as the mappings that apply if the document meets the conditions
+
+The below code will make it so that any document in this index will use int instead of long for any integer that is mapped.
+
+```
+ PUT /dyno_template_test
+ {
+   "mappings": {
+     "dynamic_templates": [
+        {
+          "integers": {
+            "match_mapping_type": "long",
+            "mapping":{
+              "type": "integer"
+            }
+          }
+        }
+   }
+ }
+ ```
+
+ The below template will map the `keyword` type to any data property ending in keyword, and any string beginning with `text_` is applied the text mapping.
+ An approach like this allows mapping based on naming conventions on property names.
+
+ ```ndjson
+PUT /test_index
+{
+  "mappings": {
+    "dynamic_templates": [
+      {
+        "strings_only_text": {
+          "match_mapping_type": "string",
+          "match": "text_*",
+          "unmatch": "*_keyword",
+          "mapping": {
+            "type": "text"
+          }
+        }
+      },
+      {
+        "strings_only_keyword": {
+          "match_mapping_type": "string",
+          "match": "*_keyword",
+          "mapping": {
+            "type": "keyword"
+          }
+        }
+      }
+    ]
+  }
+}
+
+POST /test_index/_doc
+{
+  "text_product_description": "A description.",
+  "text_product_id_keyword": "ABC-123"
+}
+```
+
+
+This also works for nested obects
+
+```
+PUT /test_index
+{
+  "mappings": {
+    "dynamic_templates": [
+      {
+        "copy_to_full_name": {
+          "match_mapping_type": "string",
+          "path_match": "employer.name.*",
+          "mapping": {
+            "type": "text",
+            "copy_to": "full_name"
+          }
+        }
+      }
+    ]
+  }
+}
+
+POST /test_index/_doc
+{
+  "employer": {
+    "name": {
+      "first_name": "John",
+      "middle_name": "Edward",
+      "last_name": "Doe"
+    }
+  }
+}
+```
+
+
+### Index tenplates vs dynamic templates
+Index templates apply mappings and index settings for matching indexes - This happens when indexes are created and their names match a pattern.
+
+Dynamic templates are evaluated when new fields are encountered (and dynamic mapping is enabled)
+
+The specified field mapping is added if the templates conditions match.
+
+*Index mappnigs define fixed mappings, dynamic templates are dynamic*
+
+
+# Mapping Best Practices
+* Dynamic mappings are convenient, but really shouldn't be used in production, fix your mappings.
+* Save disk space by optimizing mappings when storing many documents.
+* Set `dynamic` to strict, not `false`
+  - Avoids surprises and unexpected results
+* Do not always map text fields as both text and keyword. Keep in mind that each mappng requires disk spacee.
+  - Do you need to perform full text searches? Use the `text` mapping.
+  - Do you need to do aggregations, sorting, or filtering on an exact value? use `keyword` mapping.
+* Disable type coercion
+* Use appropriate numeric data types.
+  - Whole numbers - integer data type may be enough.
+  - The `long` can store larger numbers, but takes up more disk space.
+  - For decimals, the `float` is precise enough.
+  - The `double` is higher precision than float, but takes up twice as much space
+* If you are not using sorting, filtering, or aggregating, set `doc_values` to false.
+* If you don't need relevance scoring, set `norms` to false
+* Set `index` to fakse if you dont need to filter on values
+  - keep in mind you can still do aggregations on this
+
+# Data Analyzers
+
+## Stemming and stop words
+ES is smart enough to match the tense of a word `love/loved/loves/loving`
+
+Stemming is the process of reducing words to their root form. Note that this is internal only, clients do not see the stems.
+
+For example:
+
+`I loved drinking bottles of wine on last year's vacation` -> `I love drink bottl of wine on lasy year vacat.`
+
+## Stop words.
+
+Common filler words: `a, the, at, on, of`
+
+They provide little to no value for relevance scoring.
+
+It is fairly common to remove these in search engines, however it is not that normal in ES anymore as the relevance algorithm has been improved over time.
+
+Really, you don't need to remove these.
+
+## Built in analyzer.
+
+### standard
+splits tect at word boundaries and removes punctuation, lowercases, and also contains the stop filter (disabled by default)
+
+### simple
+splits input tect when encountering anything other than letters, it also lowercases letters.
+
+This is not used much and is a performance hack.
+
+
+## whitepace 
+Splits strings by whitespace, doees not lowercase, does not remove punctiation or stop words.
+
+### keyword
+no-op analyxer that leaves the input text intact and outputs it as a single token.
+
+This is used by keyword fields by default. And ecact matching.
+
+### pattern
+
+use regex to match token seperators, this is very flexible.
+
+### language specific analyxer
+
+You can get an analyzer for most popular languages. This will remove spanish, or russian stop words and has language specific stemmers.
+
+
+## Custom analyzers
+
+Below are a few examples of custom analysis.
+```
+POST /_analyze
+{
+  "char_filter": ["html_strip"],
+  "text": "I&apos;m in a <em>good</em> mood&nbsp;-&nbsp;and I <strong>love</strong> açaí!"
+}
+```
+Now you can add to it, by removing english stop words for example
+```
+POST /_analyze
+{
+  "char_filter": ["html_strip"],
+  "tokenizer": "standard",
+  "filter": [
+    "lowercase",
+    "stop"
+  ],
+  "text": "I&apos;m in a <em>good</em> mood&nbsp;-&nbsp;and I <strong>love</strong> açaí!"
+}
+```
+
+You can also create your own analzer
+```
+PUT /analyzer_test
+{
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "my_custom_analyzer": {
+          "type": "custom",
+          "char_filter": ["html_strip"],
+          "tokenizer": "standard",
+          "filter": [
+            "lowercase",
+            "stop",
+            "asciifolding"
+          ]
+        }
+      }
+    }
+  }
+}
+
+```
+Then use your custom analyzer
+```
+POST /analyzer_test/_analyze
+{
+  "analyzer": "my_custom_analyzer",
+  "text": "I&apos;m in a <em>good</em> mood&nbsp;-&nbsp;and I <strong>love</strong> açaí!"
+}
+
 ```
