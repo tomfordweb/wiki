@@ -1,0 +1,6 @@
+---
+- hosts: control
+  gather_facts: false
+  become_user: tom
+  roles:
+    - control

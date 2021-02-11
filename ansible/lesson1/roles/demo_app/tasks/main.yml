@@ -1,0 +1,42 @@
+---
+# tasks file for demo_app
+- name: install apache2
+  apt:
+    state: present
+    pkg:
+      - python3-pip
+      - python3-virtualenv
+      - python3-mysqldb
+  tags: ["packages"]
+
+- name: handle wsgi template
+  template:
+    src: demo.wsgi.j2
+    dest: /var/www/demo
+    mode: 0755
+  tags: ["configure"]
+
+- name: copy demo app source
+  ansible.builtin.copy:
+    src: "demo/app"
+    dest: /var/www
+    mode: 0755
+  notify: restart_apache2
+  tags: ["build"]
+
+- name: copy apache virtual host config
+  ansible.builtin.copy:
+    src: "demo/demo.conf"
+    dest: /etc/apache2/sites-available
+  notify: restart_apache2
+  tags: ["configure"]
+
+- name: setup python venv
+  pip: requirements=/var/www/app/requirements.txt virtualenv=/var/www/app/.venv
+  notify: restart_apache2
+  tags: ["system"]
+
+- name: activate demo site
+  file: src=/etc/apache2/sites-available/demo.conf dest=/etc/apache2/sites-enabled/demo.conf state=link
+  notify: restart_apache2
+  tags: ["system"]
